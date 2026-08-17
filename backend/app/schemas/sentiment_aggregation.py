@@ -4,6 +4,8 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from pydantic import BaseModel, Field, model_validator
 
+from app.schemas.review import ReviewDataKind
+
 
 _ONE_DECIMAL_PLACE = Decimal("0.1")
 _HUNDRED = Decimal("100")
@@ -18,6 +20,9 @@ def _rounded_percentage(count: int, total: int) -> Decimal:
 class AggregateSentimentStatistics(BaseModel):
     """Count-derived statistics over a caller-supplied set of sentiment results."""
 
+    provider_id: str | None = None
+    data_kind: ReviewDataKind | None = None
+    dataset_label: str | None = None
     reviews_received: int = Field(ge=0)
     total_analyzed_reviews: int = Field(ge=0)
     positive_count: int = Field(ge=0)
