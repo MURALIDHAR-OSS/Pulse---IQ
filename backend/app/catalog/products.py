@@ -47,6 +47,11 @@ PRODUCT_CATALOG: tuple[Product, ...] = (
 )
 
 
+def get_product_by_id(product_id: str) -> Product | None:
+    """Return one canonical product from the local seed catalog."""
+    return next((product for product in PRODUCT_CATALOG if product.id == product_id), None)
+
+
 def _tokens(value: str) -> set[str]:
     return set(re.findall(r"[a-z0-9]+", value.lower()))
 

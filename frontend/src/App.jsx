@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
-import { searchProducts } from './services/productsApi'
+import { AppHeader } from './components/AppHeader'
+import { ProductPage } from './pages/ProductPage'
+import { SearchPage } from './pages/SearchPage'
 
 function getInitialTheme() {
   const savedTheme = localStorage.getItem('pulseiq-theme')
@@ -10,100 +13,23 @@ function getInitialTheme() {
 
 function App() {
   const [theme, setTheme] = useState(getInitialTheme)
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState([])
-  const [searchedQuery, setSearchedQuery] = useState('')
-  const [status, setStatus] = useState('idle')
-  const [error, setError] = useState('')
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     localStorage.setItem('pulseiq-theme', theme)
   }, [theme])
 
-  async function handleSubmit(event) {
-    event.preventDefault()
-    const trimmedQuery = query.trim()
-    if (!trimmedQuery) return
-
-    setStatus('loading')
-    setError('')
-    setResults([])
-    setSearchedQuery(trimmedQuery)
-
-    try {
-      const data = await searchProducts(trimmedQuery)
-      setResults(data.results)
-      setStatus('success')
-    } catch (requestError) {
-      setError(requestError.message)
-      setStatus('error')
-    }
-  }
-
   return (
-    <main className="app-shell">
-      <header className="site-header">
-        <a className="brand" href="/" aria-label="PulseIQ home">Pulse<span>IQ</span></a>
-        <button
-          className="theme-toggle"
-          type="button"
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
-        >
-          {theme === 'light' ? 'Dark mode' : 'Light mode'}
-        </button>
-      </header>
-
-      <section className="search-hero" aria-labelledby="page-title">
-        <p className="eyebrow">Consumer intelligence, starting with the product</p>
-        <h1 id="page-title">Find the product you want to understand.</h1>
-        <p className="hero-copy">Search our local product catalog to begin a future PulseIQ analysis.</p>
-
-        <form className="search-form" onSubmit={handleSubmit}>
-          <label className="sr-only" htmlFor="product-search">Search products</label>
-          <input
-            id="product-search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Try “iPhone 17 Pro”"
-            autoComplete="off"
-          />
-          <button type="submit" disabled={!query.trim() || status === 'loading'}>
-            {status === 'loading' ? 'Searching…' : 'Search'}
-          </button>
-        </form>
-      </section>
-
-      <section className="results-section" aria-live="polite" aria-busy={status === 'loading'}>
-        {status === 'idle' && <p className="results-hint">Search for a product to see matching canonical products.</p>}
-        {status === 'loading' && <p className="results-hint">Searching the local catalog…</p>}
-        {status === 'error' && <p className="message error-message">{error}</p>}
-        {status === 'success' && results.length === 0 && (
-          <p className="message">No products matched “{searchedQuery}” in the local catalog.</p>
-        )}
-        {status === 'success' && results.length > 0 && (
-          <>
-            <div className="results-heading">
-              <h2>Matching products</h2>
-              <p>{results.length} result{results.length === 1 ? '' : 's'} for “{searchedQuery}”</p>
-            </div>
-            <ul className="product-grid">
-              {results.map((product) => (
-                <li className="product-card" key={product.id}>
-                  <div className="product-monogram" aria-hidden="true">{product.brand.slice(0, 1)}</div>
-                  <div>
-                    <p className="product-category">{product.category}</p>
-                    <h3>{product.name}</h3>
-                    <p className="product-brand">{product.brand}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </section>
-    </main>
+    <BrowserRouter>
+      <main className="app-shell">
+        <AppHeader theme={theme} onThemeToggle={() => setTheme(theme === 'light' ? 'dark' : 'light')} />
+        <Routes>
+          <Route path="/" element={<SearchPage />} />
+          <Route path="/products/:productId" element={<ProductPage />} />
+          <Route path="*" element={<SearchPage />} />
+        </Routes>
+      </main>
+    </BrowserRouter>
   )
 }
 
