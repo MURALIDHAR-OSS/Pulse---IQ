@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { IntelligencePlaceholder } from '../components/IntelligencePlaceholder'
+import { ReviewDataSection } from '../components/ReviewDataSection'
 import { StatePanel } from '../components/StatePanel'
-import { getProduct } from '../services/productsApi'
+import { getProduct, getProductReviews } from '../services/productsApi'
 
 const PLACEHOLDER_SECTIONS = [
   ['Consumer verdict', 'A grounded consumer verdict will appear here when permitted review intelligence is available.'],
@@ -17,12 +18,17 @@ export function ProductPage() {
   const { productId } = useParams()
   const [product, setProduct] = useState(null)
   const [status, setStatus] = useState('loading')
+  const [reviewData, setReviewData] = useState(null)
+  const [reviewStatus, setReviewStatus] = useState('idle')
 
   useEffect(() => {
     const controller = new AbortController()
 
     async function loadProduct() {
       setStatus('loading')
+      setProduct(null)
+      setReviewData(null)
+      setReviewStatus('idle')
       try {
         const data = await getProduct(productId, controller.signal)
         setProduct(data)
@@ -37,6 +43,28 @@ export function ProductPage() {
     loadProduct()
     return () => controller.abort()
   }, [productId])
+
+  useEffect(() => {
+    if (!product) return undefined
+
+    const controller = new AbortController()
+
+    async function loadReviews() {
+      setReviewStatus('loading')
+      try {
+        const data = await getProductReviews(product.id, controller.signal)
+        setReviewData(data)
+        setReviewStatus('success')
+      } catch (requestError) {
+        if (requestError.name !== 'AbortError') {
+          setReviewStatus('error')
+        }
+      }
+    }
+
+    loadReviews()
+    return () => controller.abort()
+  }, [product])
 
   if (status === 'loading') {
     return <StatePanel title="Loading product" description="Retrieving the canonical product from the local catalog." />
@@ -69,6 +97,8 @@ export function ProductPage() {
         <p className="eyebrow">Product Intelligence</p>
         <h2 id="intelligence-title">Future consumer insights, clearly separated from product identity.</h2>
       </section>
+
+      <ReviewDataSection status={reviewStatus} data={reviewData} />
 
       <div className="placeholder-grid">
         {PLACEHOLDER_SECTIONS.map(([title, description]) => (

@@ -21,3 +21,15 @@ export async function getProduct(productId, signal) {
 
   return response.json()
 }
+
+export async function getProductReviews(productId, signal) {
+  const response = await fetch(`/api/v1/products/${encodeURIComponent(productId)}/reviews`, { signal })
+
+  if (!response.ok) {
+    const error = new Error('Demo review data is unavailable.')
+    error.status = response.status
+    throw error
+  }
+
+  return response.json()
+}
