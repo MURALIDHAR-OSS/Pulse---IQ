@@ -1,121 +1,109 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { useEffect, useState } from 'react'
 import './App.css'
+import { searchProducts } from './services/productsApi'
+
+function getInitialTheme() {
+  const savedTheme = localStorage.getItem('pulseiq-theme')
+  if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [theme, setTheme] = useState(getInitialTheme)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState([])
+  const [searchedQuery, setSearchedQuery] = useState('')
+  const [status, setStatus] = useState('idle')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    localStorage.setItem('pulseiq-theme', theme)
+  }, [theme])
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    const trimmedQuery = query.trim()
+    if (!trimmedQuery) return
+
+    setStatus('loading')
+    setError('')
+    setResults([])
+    setSearchedQuery(trimmedQuery)
+
+    try {
+      const data = await searchProducts(trimmedQuery)
+      setResults(data.results)
+      setStatus('success')
+    } catch (requestError) {
+      setError(requestError.message)
+      setStatus('error')
+    }
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
+    <main className="app-shell">
+      <header className="site-header">
+        <a className="brand" href="/" aria-label="PulseIQ home">Pulse<span>IQ</span></a>
         <button
+          className="theme-toggle"
           type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
         >
-          Count is {count}
+          {theme === 'light' ? 'Dark mode' : 'Light mode'}
         </button>
+      </header>
+
+      <section className="search-hero" aria-labelledby="page-title">
+        <p className="eyebrow">Consumer intelligence, starting with the product</p>
+        <h1 id="page-title">Find the product you want to understand.</h1>
+        <p className="hero-copy">Search our local product catalog to begin a future PulseIQ analysis.</p>
+
+        <form className="search-form" onSubmit={handleSubmit}>
+          <label className="sr-only" htmlFor="product-search">Search products</label>
+          <input
+            id="product-search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Try “iPhone 17 Pro”"
+            autoComplete="off"
+          />
+          <button type="submit" disabled={!query.trim() || status === 'loading'}>
+            {status === 'loading' ? 'Searching…' : 'Search'}
+          </button>
+        </form>
       </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
+      <section className="results-section" aria-live="polite" aria-busy={status === 'loading'}>
+        {status === 'idle' && <p className="results-hint">Search for a product to see matching canonical products.</p>}
+        {status === 'loading' && <p className="results-hint">Searching the local catalog…</p>}
+        {status === 'error' && <p className="message error-message">{error}</p>}
+        {status === 'success' && results.length === 0 && (
+          <p className="message">No products matched “{searchedQuery}” in the local catalog.</p>
+        )}
+        {status === 'success' && results.length > 0 && (
+          <>
+            <div className="results-heading">
+              <h2>Matching products</h2>
+              <p>{results.length} result{results.length === 1 ? '' : 's'} for “{searchedQuery}”</p>
+            </div>
+            <ul className="product-grid">
+              {results.map((product) => (
+                <li className="product-card" key={product.id}>
+                  <div className="product-monogram" aria-hidden="true">{product.brand.slice(0, 1)}</div>
+                  <div>
+                    <p className="product-category">{product.category}</p>
+                    <h3>{product.name}</h3>
+                    <p className="product-brand">{product.brand}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    </main>
   )
 }
 
